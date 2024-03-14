@@ -5,7 +5,7 @@ import java.util.*;
 public class Day22 {
     public static void main(String[] args) {
         simulate(false);
-        simulate(true); // TODO Does not give the correct result yet
+        simulate(true);
     }
 
     private static void simulate(boolean hardMode) {
@@ -55,7 +55,7 @@ public class Day22 {
         public Map<State, Integer> getNeighbours() {
             if (playerHitpoints > 0 && bossHitpoints > 0) {
                 State state = new State(this);
-                if (hardMode) {
+                if (hardMode && playerTurn) {
                     state.playerHitpoints--;
                 }
                 if (state.playerHitpoints <= 0) {
