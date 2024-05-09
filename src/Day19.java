@@ -1,10 +1,11 @@
 import lib.InputUtil;
+import lib.simplex.ConstraintType;
+import lib.simplex.Simplex;
+import lib.simplex.Solution;
+import lib.simplex.VariableType;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -16,7 +17,17 @@ public class Day19 {
         List<Rule> rules = Arrays.stream(sp).map(Rule::new).collect(Collectors.toList());
         String molecule = input.get(1);
         first(molecule, rules);
-        second(molecule);
+        second(molecule, rules);
+    }
+
+    private static List<String> listAtoms(String molecule) {
+        Pattern pattern = Pattern.compile("([A-Z][a-z]*)|e");
+        Matcher matcher = pattern.matcher(molecule);
+        List<String> result = new ArrayList<>();
+        while (matcher.find()) {
+            result.add(matcher.group());
+        }
+        return result;
     }
 
     private static void first(String molecule, List<Rule> rules) {
@@ -24,23 +35,38 @@ public class Day19 {
         System.out.println(molecules.size());
     }
 
-    private static void second(String molecule) {
-        Pattern pattern = Pattern.compile("[A-Z][a-z]*");
-        Matcher matcher = pattern.matcher(molecule);
-        int count = 0;
-        int countArRn = 0;
-        int countY = 0;
-        while (matcher.find()) {
-            String group = matcher.group();
-            count++;
-            if ("Ar".equals(group) || "Rn".equals(group)) {
-                countArRn++;
-            } else if ("Y".equals(group)) {
-                countY++;
+    private static void second(String molecule, List<Rule> rules) {
+        List<String> startAtoms = List.of("e");
+        List<String> moleculeAtoms = listAtoms(molecule);
+        Set<String> allAtoms = new HashSet<>(moleculeAtoms);
+        for (Rule rule : rules) {
+            allAtoms.addAll(listAtoms(rule.key));
+            allAtoms.addAll(listAtoms(rule.value));
+        }
+        Simplex simplex = new Simplex();
+        for (int i = 0; i < rules.size(); i++) {
+            simplex.addVariable(VariableType.INTEGER_NONNEGATIVE, 1.0);
+        }
+        for (String atom : allAtoms) {
+            long left = startAtoms.stream().filter(atom::equals).count();
+            long right = moleculeAtoms.stream().filter(atom::equals).count();
+            long balance = right - left;
+            simplex.addConstraint(ConstraintType.EQUAL, balance);
+            for (int i = 0; i < rules.size(); i++) {
+                Rule rule = rules.get(i);
+                long leftr = listAtoms(rule.key).stream().filter(atom::equals).count();
+                long rightr = listAtoms(rule.value).stream().filter(atom::equals).count();
+                long balancer = rightr - leftr;
+                if (balance != 0L) {
+                    simplex.addConstraintTerm(balancer, i);
+                }
             }
         }
-        int result = count - countArRn - 2 * countY - 1;
-        System.out.println(result);
+        Solution solution = simplex.solve();
+        if (solution != null) {
+            int value = (int) solution.getValue();
+            System.out.println(value);
+        }
     }
 
     private static Set<String> singleReplacement(String molecule, List<Rule> rules) {
