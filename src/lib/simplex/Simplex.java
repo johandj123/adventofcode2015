@@ -254,9 +254,6 @@ public class Simplex {
                 sol[i] = physsol[rowIndex] - physsol[rowIndex + 1];
                 rowIndex += 2;
             }
-            if (variable.getType().isInteger()) {
-                sol[i] = Math.floor(sol[i] + 0.5);
-            }
         }
         double value = t.getTopRowOrDefault(width - 1);
         return new Solution(value, sol);
@@ -289,13 +286,13 @@ public class Simplex {
         }
 
         // Branch and bound
-        addConstraint(ConstraintType.LESS_OR_EQUAL, Math.floor(nonIntegralSolution.getVars()[i]) + 2 * EPSILON);
+        addConstraint(ConstraintType.LESS_OR_EQUAL, Math.floor(nonIntegralSolution.getVars()[i]));
         addConstraintTerm(1.0, i);
         solution = solveIntegerBranchAndBound(solution);
         constraints.remove(constraints.size() - 1);
         terms.remove(terms.size() - 1);
 
-        addConstraint(ConstraintType.LESS_OR_EQUAL, -Math.ceil(nonIntegralSolution.getVars()[i]) - 2 * EPSILON);
+        addConstraint(ConstraintType.LESS_OR_EQUAL, -Math.ceil(nonIntegralSolution.getVars()[i]));
         addConstraintTerm(-1.0, i);
         solution = solveIntegerBranchAndBound(solution);
         constraints.remove(constraints.size() - 1);
