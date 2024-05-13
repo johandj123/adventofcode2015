@@ -1,19 +1,21 @@
 package lib.simplex;
 
-public class Solution {
-    private final double value;
-    private final double[] vars;
+import lib.BigRational;
 
-    public Solution(double value, double[] vars) {
+public class Solution {
+    private final BigRational value;
+    private final BigRational[] vars;
+
+    public Solution(BigRational value, BigRational[] vars) {
         this.value = value;
         this.vars = vars;
     }
 
-    public double getValue() {
+    public BigRational getValue() {
         return value;
     }
 
-    public double[] getVars() {
+    public BigRational[] getVars() {
         return vars;
     }
 }

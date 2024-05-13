@@ -1,11 +1,13 @@
 package lib.simplex;
 
+import lib.BigRational;
+
 public class Variable {
     private final VariableType type;
     private int physVar;
-    private final double goalFactor;
+    private final BigRational goalFactor;
 
-    Variable(VariableType type, double goalFactor) {
+    Variable(VariableType type, BigRational goalFactor) {
         this.type = type;
         this.goalFactor = goalFactor;
     }
@@ -22,7 +24,7 @@ public class Variable {
         this.physVar = physVar;
     }
 
-    double getGoalFactor() {
+    BigRational getGoalFactor() {
         return goalFactor;
     }
 }

@@ -1,9 +1,11 @@
 package lib.simplex;
 
+import lib.BigRational;
+
 import java.util.*;
 
 public class Tableau {
-    final List<SortedMap<Integer, Double>> columns = new ArrayList<>();
+    final List<SortedMap<Integer, BigRational>> columns = new ArrayList<>();
     final int width;
     final int height;
 
@@ -21,45 +23,41 @@ public class Tableau {
 
     void minusOneColumn() {
         emptyMinusOneColumn();
-        Map<Integer, Double> ht = columns.get(width - 2);
+        Map<Integer, BigRational> ht = columns.get(width - 2);
         for (int row = 0; row < height; row++) {
-            ht.put(row, (row == 0) ? 1.0 : -1.0);
+            ht.put(row, (row == 0) ? BigRational.ONE : BigRational.MINUS_ONE);
         }
     }
 
-    Double get(int j,int i) {
-        return columns.get(i).get(j);
+    BigRational get(int j,int i) {
+        return columns.get(i).getOrDefault(j, BigRational.ZERO);
     }
 
-    double getOrDefault(int j,int i) {
-        return columns.get(i).getOrDefault(j, 0.0);
-    }
-
-    Double getTopRow(int i) {
+    BigRational getTopRow(int i) {
         return get(0, i);
     }
 
-    double getTopRowOrDefault(int i) {
-        return getOrDefault(0, i);
+    BigRational getTopRowOrDefault(int i) {
+        return get(0, i);
     }
 
-    void set(int j,int i,double value) {
-        if (Simplex.isZero(value)) {
+    void set(int j, int i, BigRational value) {
+        if (value.isZero()) {
             columns.get(i).remove(j);
         } else {
             columns.get(i).put(j, value);
         }
     }
 
-    void add(int j,int i,double value) {
-        set(j, i, getOrDefault(j, i) + value);
+    void add(int j,int i,BigRational value) {
+        set(j, i, get(j, i).add(value));
     }
 
     int findPivotColumn(boolean aux) {
         int limit = aux ? width - 1 : width - 2;
         for (int i = 0; i < limit; i++) {
-            Double v = getTopRow(i);
-            if (v != null && v < 0.0) {
+            BigRational v = getTopRow(i);
+            if (v.isNegative()) {
                 return i;
             }
         }
@@ -67,9 +65,9 @@ public class Tableau {
     }
 
     int findPivotRow(int i) {
-        SortedMap<Integer, Double> ht = columns.get(i);
+        SortedMap<Integer, BigRational> ht = columns.get(i);
         int j = -1;
-        double d = 0.0;
+        BigRational d = BigRational.ZERO;
 
         for (var el : ht.entrySet()) {
             int row = el.getKey();
@@ -77,15 +75,15 @@ public class Tableau {
                 continue;
             }
 
-            double a = el.getValue();
-            if (a <= 0.0) {
+            BigRational a = el.getValue();
+            if (!a.isPositive()) {
                 continue;
             }
 
-            double b = getOrDefault(row, width - 1);
-            double ba = b / a;
+            BigRational b = get(row, width - 1);
+            BigRational ba = b.divide(a);
 
-            if (j == -1 || ba < d) {
+            if (j == -1 || ba.compareTo(d) < 0) {
                 j = row;
                 d = ba;
             }
@@ -95,12 +93,12 @@ public class Tableau {
     }
 
     int findSmallestB() {
-        double d = 0.0;
+        BigRational d = BigRational.ZERO;
         int j = -1;
-        SortedMap<Integer, Double> ht = columns.get(width - 1);
+        SortedMap<Integer, BigRational> ht = columns.get(width - 1);
 
         for (var el : ht.entrySet()) {
-            if (j == -1 || el.getValue() < d) {
+            if (j == -1 || el.getValue().compareTo(d) < 0) {
                 j = el.getKey();
                 d = el.getValue();
             }
@@ -112,25 +110,37 @@ public class Tableau {
     void pivot(int j,int i) {
         // Pivot to (j,i)
         // Divide row j by the value at (j,i) ; skip column i since we set this column to the unit vector below
-        double d = 1.0 / getOrDefault(j, i);
+        BigRational d = get(j, i).reciprocal();
         for (int col = 0; col < width; col++) {
             if (col == i) {
                 continue;
             }
 
-            double value = getOrDefault(j, col) * d;
+            BigRational value = get(j, col).multiply(d);
             set(j, col, value);
 
             for (var elp : columns.get(i).entrySet()) {
                 if (elp.getKey() == j) {
                     continue;
                 }
-                add(elp.getKey(), col, -(elp.getValue() * value));
+                add(elp.getKey(), col, elp.getValue().multiply(value).negate());
             }
         }
 
         // Replace column i by the unit vector with a one at column j
         columns.get(i).clear();
-        columns.get(i).put(j, 1.0);
+        columns.get(i).put(j, BigRational.ONE);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                sb.append(get(y, x)).append('\t');
+            }
+            sb.append('\n');
+        }
+        return sb.toString();
     }
 }

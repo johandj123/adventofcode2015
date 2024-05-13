@@ -1,31 +1,30 @@
 package lib.simplex;
 
+import lib.BigRational;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class Simplex {
-    private static final double EPSILON = 0.0000001;
-
     private final List<Variable> variables = new ArrayList<>();
     private final List<Constraint> constraints = new ArrayList<>();
     private final List<ConstraintTerm> terms = new ArrayList<>();
 
-    public int addVariable(VariableType type, double goalFactor) {
+    public int addVariable(VariableType type, BigRational goalFactor) {
         int c = variables.size();
         variables.add(new Variable(type, goalFactor));
         if (type == VariableType.BOOLEAN) {
-            addConstraint(ConstraintType.LESS_OR_EQUAL, 1.0);
-            // TODO Add constraint
+            addConstraint(ConstraintType.LESS_OR_EQUAL, BigRational.ONE);
         }
         return c;
     }
 
-    public void addConstraint(ConstraintType type, double value) {
+    public void addConstraint(ConstraintType type, BigRational value) {
         constraints.add(new Constraint(type, value, terms.size()));
     }
 
-    public void addConstraintTerm(double factor, int var) {
+    public void addConstraintTerm(BigRational factor, int var) {
         terms.add(new ConstraintTerm(factor, var));
         constraints.get(constraints.size() - 1).incCountTerms();
     }
@@ -58,12 +57,12 @@ public class Simplex {
         boolean aux = false;
         int rowIndex = 1;
         for (Constraint constraint : constraints) {
-            if (constraint.getValue() < 0.0 || (constraint.getType() == ConstraintType.EQUAL && !isZero(constraint.getValue()))) {
+            if (constraint.getValue().isNegative() || (constraint.getType() == ConstraintType.EQUAL && !constraint.getValue().isZero())) {
                 aux = true;
             }
             t.add(rowIndex++, width - 1, constraint.getValue());
             if (constraint.getType() == ConstraintType.EQUAL) {
-                t.add(rowIndex++, width - 1, -constraint.getValue());
+                t.add(rowIndex++, width - 1, constraint.getValue().negate());
             }
         }
 
@@ -75,7 +74,7 @@ public class Simplex {
                 Variable v = variables.get(term.getVar());
                 t.add(rowIndex, v.getPhysVar(), term.getFactor());
                 if (!v.getType().isNonNegative()) {
-                    t.add(rowIndex, v.getPhysVar() + 1, -term.getFactor());
+                    t.add(rowIndex, v.getPhysVar() + 1, term.getFactor().negate());
                 }
             }
             rowIndex++;
@@ -84,7 +83,7 @@ public class Simplex {
                 for (int k = constraint.getFirstTerm(); k < constraint.getFirstTerm() + constraint.getCountTerms(); k++) {
                     ConstraintTerm term = terms.get(k);
                     Variable v = variables.get(term.getVar());
-                    t.add(rowIndex, v.getPhysVar(), -term.getFactor());
+                    t.add(rowIndex, v.getPhysVar(), term.getFactor().negate());
                     if (!v.getType().isNonNegative()) {
                         t.add(rowIndex, v.getPhysVar() + 1, term.getFactor());
                     }
@@ -93,7 +92,7 @@ public class Simplex {
             }
         }
         for (int i = 0; i < countPhysConstraints; i++) {
-            t.add(i + 1, i + countPhysVars, 1.0);
+            t.add(i + 1, i + countPhysVars, BigRational.ONE);
         }
 
         // Determine initial base
@@ -147,7 +146,7 @@ public class Simplex {
                 baseColumns[i] = j - 1;
             }
 
-            if (t.getTopRow(width - 1) != null) {
+            if (!t.getTopRow(width - 1).isZero()) {
                 // No feasible base
                 return null;
             }
@@ -160,7 +159,7 @@ public class Simplex {
                     if (baseColumns[i] != -1) {
                         continue;
                     }
-                    if (t.get(j, i) != null) {
+                    if (!t.get(j, i).isZero()) {
                         break;
                     }
                 }
@@ -182,24 +181,24 @@ public class Simplex {
         // Fill in -c
         rowIndex = 0;
         for (Variable variable : variables) {
-            t.set(0, rowIndex++, -variable.getGoalFactor());
+            t.set(0, rowIndex++, variable.getGoalFactor().negate());
             if (!variable.getType().isNonNegative()) {
                 t.set(0, rowIndex++, variable.getGoalFactor());
             }
         }
         while (rowIndex < width) {
-            t.set(0, rowIndex++, 0.0);
+            t.set(0, rowIndex++, BigRational.ZERO);
         }
 
         if (aux) {
             for (int i = 0; i < width - 2; i++) {
                 if (baseColumns[i] != -1) {
-                    Double d = t.getTopRow(i);
-                    if (d != null) {
+                    BigRational d = t.getTopRow(i);
+                    if (!d.isZero()) {
                         for (int k = 0; k < width; k++) {
-                            Double e = t.get(baseColumns[i] + 1, k);
-                            if (e != null) {
-                                t.add(0, k, -(d * e));
+                            BigRational e = t.get(baseColumns[i] + 1, k);
+                            if (!e.isZero()) {
+                                t.add(0, k, d.multiply(e).negate());
                             }
                         }
                     }
@@ -235,27 +234,28 @@ public class Simplex {
         }
 
         // Determine solution
-        double[] physsol = new double[countPhysVars + countPhysConstraints];
+        BigRational[] physsol = new BigRational[countPhysVars + countPhysConstraints];
+        Arrays.fill(physsol, BigRational.ZERO);
         for (int i = 0; i < countPhysConstraints; i++) {
-            double v = t.getOrDefault(i + 1, width - 1);
-            if (v < 0.0) {
+            BigRational v = t.get(i + 1, width - 1);
+            if (v.isNegative()) {
                 // Not feasible, row base_vectors[i], value v
                 return null;
             }
             physsol[baseVectors[i]] = v;
         }
-        double[] sol = new double[variables.size()];
+        BigRational[] sol = new BigRational[variables.size()];
         rowIndex = 0;
         for (int i = 0; i < variables.size(); i++) {
             Variable variable = variables.get(i);
             if (variable.getType().isNonNegative()) {
                 sol[i] = physsol[rowIndex++];
             } else {
-                sol[i] = physsol[rowIndex] - physsol[rowIndex + 1];
+                sol[i] = physsol[rowIndex].subtract(physsol[rowIndex + 1]);
                 rowIndex += 2;
             }
         }
-        double value = t.getTopRowOrDefault(width - 1);
+        BigRational value = t.getTopRowOrDefault(width - 1);
         return new Solution(value, sol);
     }
 
@@ -269,13 +269,13 @@ public class Simplex {
 
         // Return if there is no solution or it has a lower value than the one we already have
         if (nonIntegralSolution == null ||
-                (solution != null && nonIntegralSolution.getValue() <= solution.getValue())) {
+                (solution != null && nonIntegralSolution.getValue().compareTo(solution.getValue()) <= 0)) {
             return solution;
         }
 
         int i = 0;
         while (i < variables.size()) {
-            if (variables.get(i).getType().isInteger() && !isIntegral(nonIntegralSolution.getVars()[i])) {
+            if (variables.get(i).getType().isInteger() && !nonIntegralSolution.getVars()[i].isIntegral()) {
                 break;
             }
             i++;
@@ -286,26 +286,18 @@ public class Simplex {
         }
 
         // Branch and bound
-        addConstraint(ConstraintType.LESS_OR_EQUAL, Math.floor(nonIntegralSolution.getVars()[i]));
-        addConstraintTerm(1.0, i);
+        addConstraint(ConstraintType.LESS_OR_EQUAL, nonIntegralSolution.getVars()[i].floor());
+        addConstraintTerm(BigRational.ONE, i);
         solution = solveIntegerBranchAndBound(solution);
         constraints.remove(constraints.size() - 1);
         terms.remove(terms.size() - 1);
 
-        addConstraint(ConstraintType.LESS_OR_EQUAL, -Math.ceil(nonIntegralSolution.getVars()[i]));
-        addConstraintTerm(-1.0, i);
+        addConstraint(ConstraintType.LESS_OR_EQUAL, nonIntegralSolution.getVars()[i].ceil().negate());
+        addConstraintTerm(BigRational.MINUS_ONE, i);
         solution = solveIntegerBranchAndBound(solution);
         constraints.remove(constraints.size() - 1);
         terms.remove(terms.size() - 1);
 
         return solution;
-    }
-
-    public static boolean isZero(double v) {
-        return (v > -EPSILON && v < EPSILON);
-    }
-
-    public static boolean isIntegral(double v) {
-        return isZero(v - Math.floor(v + 0.5));
     }
 }

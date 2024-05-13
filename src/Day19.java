@@ -1,3 +1,4 @@
+import lib.BigRational;
 import lib.InputUtil;
 import lib.simplex.ConstraintType;
 import lib.simplex.Simplex;
@@ -45,27 +46,26 @@ public class Day19 {
         }
         Simplex simplex = new Simplex();
         for (int i = 0; i < rules.size(); i++) {
-            simplex.addVariable(VariableType.INTEGER_NONNEGATIVE, 1.0);
+            simplex.addVariable(VariableType.INTEGER_NONNEGATIVE, BigRational.ONE);
         }
         for (String atom : allAtoms) {
             long left = startAtoms.stream().filter(atom::equals).count();
             long right = moleculeAtoms.stream().filter(atom::equals).count();
             long balance = right - left;
-            simplex.addConstraint(ConstraintType.EQUAL, balance);
+            simplex.addConstraint(ConstraintType.EQUAL, new BigRational(balance));
             for (int i = 0; i < rules.size(); i++) {
                 Rule rule = rules.get(i);
                 long leftr = listAtoms(rule.key).stream().filter(atom::equals).count();
                 long rightr = listAtoms(rule.value).stream().filter(atom::equals).count();
                 long balancer = rightr - leftr;
                 if (balance != 0L) {
-                    simplex.addConstraintTerm(balancer, i);
+                    simplex.addConstraintTerm(new BigRational(balancer), i);
                 }
             }
         }
         Solution solution = simplex.solve();
         if (solution != null) {
-            int value = (int) solution.getValue();
-            System.out.println(value);
+            System.out.println(solution.getValue());
         }
     }
 

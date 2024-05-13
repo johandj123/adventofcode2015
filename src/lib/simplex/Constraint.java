@@ -1,13 +1,15 @@
 package lib.simplex;
 
+import lib.BigRational;
+
 public class Constraint {
     private final ConstraintType type;
     private final int firstTerm;
     private int countTerms;
-    private final double value;
+    private final BigRational value;
     private int physConstraint;
 
-    public Constraint(ConstraintType type, double value, int firstTerm) {
+    public Constraint(ConstraintType type, BigRational value, int firstTerm) {
         this.type = type;
         this.firstTerm = firstTerm;
         this.value = value;
@@ -29,7 +31,7 @@ public class Constraint {
         countTerms++;
     }
 
-    double getValue() {
+    BigRational getValue() {
         return value;
     }
 

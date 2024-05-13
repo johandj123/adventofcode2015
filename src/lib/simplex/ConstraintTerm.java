@@ -1,15 +1,17 @@
 package lib.simplex;
 
+import lib.BigRational;
+
 public class ConstraintTerm {
-    private final double factor;
+    private final BigRational factor;
     private final int var;
 
-    public ConstraintTerm(double factor, int var) {
+    public ConstraintTerm(BigRational factor, int var) {
         this.factor = factor;
         this.var = var;
     }
 
-    public double getFactor() {
+    public BigRational getFactor() {
         return factor;
     }
 
