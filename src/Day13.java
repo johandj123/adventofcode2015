@@ -1,4 +1,5 @@
 import lib.InputUtil;
+import lib.PermutationUtil;
 
 import java.io.IOException;
 import java.util.*;
@@ -11,8 +12,7 @@ public class Day13 {
     }
 
     private static void first(Map<String, Map<String, Integer>> map) {
-        List<List<String>> permutations = generatePermutations(map);
-        int result = permutations.stream()
+        int result = PermutationUtil.permutationsStream(new ArrayList<>(map.keySet()))
                 .mapToInt(permutation -> calculateHappiness(map, permutation))
                 .max()
                 .orElseThrow();
@@ -21,8 +21,7 @@ public class Day13 {
 
     private static void second(Map<String, Map<String, Integer>> map) {
         map.put("Me", Collections.emptyMap());
-        List<List<String>> permutations = generatePermutations(map);
-        int result = permutations.stream()
+        int result = PermutationUtil.permutationsStream(new ArrayList<>(map.keySet()))
                 .mapToInt(permutation -> calculateHappiness(map, permutation))
                 .max()
                 .orElseThrow();
@@ -58,27 +57,5 @@ public class Day13 {
             sum += map.get(current).getOrDefault(prev, 0);
         }
         return sum;
-    }
-
-    private static List<List<String>> generatePermutations(Map<String, Map<String,Integer>> map) {
-        List<String> names = new ArrayList<>(map.keySet());
-        List<String> current = new ArrayList<>();
-        List<List<String>> result = new ArrayList<>();
-        generatePermutations(names, current, result);
-        return result;
-    }
-
-    private static void generatePermutations(List<String> names,List<String> current,List<List<String>> result) {
-        if (names.isEmpty()) {
-            result.add(new ArrayList<>(current));
-            return;
-        }
-        for (String name : new ArrayList<>(names)) {
-            names.remove(name);
-            current.add(name);
-            generatePermutations(names, current, result);
-            current.remove(name);
-            names.add(name);
-        }
     }
 }
